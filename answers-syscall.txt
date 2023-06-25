@@ -1,0 +1,12 @@
+usertrap
+
+7 The system call number
+
+0 The trap originated from user mode
+
+lw a3,0(zero) a3
+
+The scause register is 0x000000000000000d (Not trapped by interrupt, load page fault), which indicates 0 is not mapped in the
+page table
+
+name: "initcode\000\000\000\000\000\000\000" pid: 1
