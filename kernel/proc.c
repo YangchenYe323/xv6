@@ -631,6 +631,22 @@ killed(struct proc *p)
   return k;
 }
 
+uint64
+num_procs(void)
+{
+  struct proc *p;
+  uint64 count = 0;
+  for (int i = 0; i < NPROC; i++) {
+    p = &proc[i];
+    acquire(&p->lock);
+    if (p->state != UNUSED) {
+      ++count;
+    }
+    release(&p->lock);
+  }
+  return count;
+}
+
 // Copy to either a user address, or kernel address,
 // depending on usr_dst.
 // Returns 0 on success, -1 on error.
