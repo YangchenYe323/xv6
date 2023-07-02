@@ -74,8 +74,15 @@ sys_sleep(void)
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
-  return 0;
+  struct proc* p = myproc();
+  uint64 va;
+  int len;
+  uint64 mask;
+  argaddr(0, &va);
+  argint(1, &len);
+  argaddr(2, &mask);
+
+  return pgaccess(p->pagetable, va, len, mask);
 }
 #endif
 
