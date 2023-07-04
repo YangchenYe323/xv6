@@ -104,4 +104,11 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // alarm ticks
+  int alarm_ticks;
+  int current_tick;
+  uint64 alarm_handler;
+  int alarm_executing;
+  struct trapframe alarmframe; // the trapframe at the time alarm handler is called
 };
