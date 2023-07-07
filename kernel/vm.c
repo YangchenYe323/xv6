@@ -325,20 +325,24 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
+
+    // set PTE_COW and clear PTE_W
+    if ((*pte & PTE_W) != 0) {
+      *pte = *pte | PTE_COW;
+    }
+    *pte = *pte & ~PTE_W;
+
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
+
+    // child pagetable points to the same RO page
+    if(mappages(new, i, PGSIZE, pa, flags) != 0){
       goto err;
     }
   }
@@ -368,11 +372,40 @@ uvmclear(pagetable_t pagetable, uint64 va)
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
+  struct proc *p = myproc();
+  pte_t *pte;
   uint64 n, va0, pa0;
+  uint flags;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
+    if (va0 >= MAXVA) {
+      return -1;
+    }
+    pte = walk(pagetable, va0, 0);
+    if (pte == 0) {
+      return -1;
+    }
+    flags = PTE_FLAGS(*pte);
+    pa0 = PTE2PA(*pte);
+    
+    // handle COW
+    if ((flags & PTE_COW) != 0) {
+      flags = (flags | PTE_W) & ~PTE_COW;
+      char *mem = kalloc();
+      if (mem == 0) {
+        setkilled(p);
+        return -1;
+      }
+      memmove(mem, (void*)pa0, PGSIZE);
+      uvmunmap(pagetable, va0, 1, 1);
+      if (mappages(pagetable, va0, PGSIZE, (uint64)mem, flags) != 0) {
+        setkilled(p);
+        return -1;
+      }
+      pa0 = (uint64)mem;
+    }
+
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (dstva - va0);
