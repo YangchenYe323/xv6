@@ -133,3 +133,19 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+void
+backtrace(void)
+{
+  uint64 cur_fp = r_fp();
+  uint64 original_page = PGROUNDDOWN(cur_fp);
+  uint64 cur_page = original_page;
+  
+  while (cur_page == original_page) {
+    // return address is located at -8(cur_fp)
+    // saved fp is located at -16(cur_fp)
+    printf("%p\n", *(uint64 *)(cur_fp - 8));
+    cur_fp = *(uint64 *)(cur_fp - 16);
+    cur_page = PGROUNDDOWN(cur_fp);
+  }
+}
