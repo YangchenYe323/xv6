@@ -156,6 +156,11 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     if(*pte & PTE_V)
       panic("mappages: remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
+
+    if (pa > KERNBASE) {
+      kreference((void*) pa);
+    }
+
     if(a == last)
       break;
     a += PGSIZE;
@@ -183,10 +188,22 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
       panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
-    if(do_free){
-      uint64 pa = PTE2PA(*pte);
+    
+    uint64 pa = PTE2PA(*pte);
+
+    int can_free = 1;
+
+    if (pa > KERNBASE) {
+      kdereference((void*) pa);
+      if (knumreference((void*) pa) != 1) {
+        can_free = 0;
+      }
+    }
+
+    if(do_free && can_free){
       kfree((void*)pa);
     }
+
     *pte = 0;
   }
 }
@@ -283,6 +300,7 @@ freewalk(pagetable_t pagetable)
       panic("freewalk: leaf");
     }
   }
+  
   kfree((void*)pagetable);
 }
 
@@ -298,10 +316,9 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 
 // Given a parent process's page table, copy
 // its memory into a child's page table.
-// Copies both the page table and the
-// physical memory.
-// returns 0 on success, -1 on failure.
-// frees any allocated pages on failure.
+// Does not copy the physical memory. Instead, both parent and
+// child virtual memory points to the same read-only physical
+// memory.
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {

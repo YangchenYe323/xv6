@@ -155,12 +155,12 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  if(p->trapframe)
-    kfree((void*)p->trapframe);
-  p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  if(p->trapframe) 
+    kfree((void*)p->trapframe);
+  p->trapframe = 0;
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
