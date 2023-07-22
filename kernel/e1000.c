@@ -103,6 +103,33 @@ e1000_transmit(struct mbuf *m)
   // a pointer so that it can be freed after sending.
   //
   
+  acquire(&e1000_lock);
+
+  // The index of the tx_desc to use next
+  uint32 offset = regs[E1000_TDT];
+  struct tx_desc *desc = &tx_ring[offset];
+
+  // If this descriptor is not ready, we can't send this packet
+  if ((desc->status & E1000_TXD_STAT_DD) == 0) {
+    return -1;
+  }
+
+  struct mbuf *oldbuf = tx_mbufs[offset];
+  if (oldbuf) {
+    mbuffree(oldbuf);
+  }
+
+  tx_mbufs[offset] = m;
+  desc->addr = (uint64) m->head;
+  desc->length = m->len;
+  desc->cmd = E1000_TXD_CMD_EOP | E1000_TXD_CMD_RS;
+  desc->status = 0;
+
+  __sync_synchronize();
+  regs[E1000_TDT] = (offset + 1) % TX_RING_SIZE;
+  __sync_synchronize();
+
+  release(&e1000_lock);
   return 0;
 }
 
@@ -115,6 +142,29 @@ e1000_recv(void)
   // Check for packets that have arrived from the e1000
   // Create and deliver an mbuf for each packet (using net_rx()).
   //
+  uint32 offset = (regs[E1000_RDT] + 1) % RX_RING_SIZE;
+  struct rx_desc *desc = &rx_ring[offset];
+  while (offset != regs[E1000_RDH] && desc->status & E1000_RXD_STAT_DD) {
+    rx_mbufs[offset]->len = desc->length;
+    net_rx(rx_mbufs[offset]);
+
+    // Create a new buffer
+    rx_mbufs[offset] = mbufalloc(0);
+    if (!rx_mbufs[offset])
+      panic("e1000_recv");
+    desc->addr = (uint64) rx_mbufs[offset]->head;
+    desc->length = 0;
+    desc->status = 0;
+
+    offset = (offset + 1) % RX_RING_SIZE;
+    desc = &rx_ring[offset];
+  }
+  
+  __sync_synchronize();
+  regs[E1000_RDT] = (offset + RX_RING_SIZE - 1) % RX_RING_SIZE;
+  __sync_synchronize();
+
+  return;
 }
 
 void
@@ -124,6 +174,5 @@ e1000_intr(void)
   // without this the e1000 won't raise any
   // further interrupts.
   regs[E1000_ICR] = 0xffffffff;
-
   e1000_recv();
 }
