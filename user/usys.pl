@@ -39,3 +39,5 @@ entry("uptime");
 entry("connect");
 entry("pgaccess");
 entry("fmem");
+entry("trace");
+entry("sysinfo");

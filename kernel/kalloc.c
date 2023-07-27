@@ -92,6 +92,21 @@ int kfreemem(void)
     count += PGSIZE;
     r = r->next;
   }
+  return count;
+}
+
+uint64
+free_physical_memory(void) {
+  uint64 count = 0;
+  struct run *r;
+  acquire(&kmem.lock);
+
+  r = kmem.freelist;
+  while (r) {
+    count += PGSIZE;
+    r = r->next;
+  }
+
   release(&kmem.lock);
   return count;
 }

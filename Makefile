@@ -31,7 +31,8 @@ OBJS = \
   $K/kernelvec.o \
   $K/plic.o \
   $K/virtio_disk.o\
-	$K/fmem.o
+	$K/fmem.o\
+	$K/sysinfo.o
 
 OBJS_KCSAN = \
   $K/start.o \
@@ -58,8 +59,6 @@ OBJS += \
 	$K/sysnet.o \
 	$K/pci.o
 endif
-
-
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
@@ -195,6 +194,10 @@ UPROGS=\
 	$U/_find\
 	$U/_xargs\
 	$U/_fm\
+	$U/_trace\
+	$U/_sysinfotest\
+
+
 
 ifeq ($(LAB),$(filter $(LAB), lock))
 UPROGS += \

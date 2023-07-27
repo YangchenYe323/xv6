@@ -28,6 +28,15 @@ sys_fork(void)
 }
 
 uint64
+sys_trace(void)
+{
+  int mask;
+  argint(0, &mask);
+  trace(mask);
+  return 0;
+}
+
+uint64
 sys_wait(void)
 {
   uint64 p;

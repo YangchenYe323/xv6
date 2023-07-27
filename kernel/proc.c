@@ -313,6 +313,9 @@ fork(void)
     return -1;
   }
 
+  // Copy parent's tracemask to child
+  np->tracemask = p->tracemask;
+
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
@@ -348,6 +351,12 @@ fork(void)
   release(&np->lock);
 
   return pid;
+}
+
+void
+trace(int mask) {
+  struct proc *p = myproc();
+  p->tracemask = mask;
 }
 
 // Pass p's abandoned children to init.
@@ -645,6 +654,22 @@ killed(struct proc *p)
   k = p->killed;
   release(&p->lock);
   return k;
+}
+
+uint64
+num_procs(void)
+{
+  struct proc *p;
+  uint64 count = 0;
+  for (int i = 0; i < NPROC; i++) {
+    p = &proc[i];
+    acquire(&p->lock);
+    if (p->state != UNUSED) {
+      ++count;
+    }
+    release(&p->lock);
+  }
+  return count;
 }
 
 // Copy to either a user address, or kernel address,

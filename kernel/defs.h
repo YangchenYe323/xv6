@@ -12,6 +12,7 @@ struct superblock;
 struct mbuf;
 struct sock;
 #endif
+struct sysinfo;
 
 // bio.c
 void            binit(void);
@@ -68,6 +69,7 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 int             kfreemem(void);
+uint64          free_physical_memory(void);
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -90,6 +92,7 @@ void            printfinit(void);
 int             cpuid(void);
 void            exit(int);
 int             fork(void);
+void            trace(int);
 int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);
@@ -111,6 +114,7 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+uint64          num_procs(void);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -198,6 +202,9 @@ void            plic_complete(int);
 void            virtio_disk_init(void);
 void            virtio_disk_rw(struct buf *, int);
 void            virtio_disk_intr(void);
+
+// sysinfo.c
+int             sysinfo(struct sysinfo *);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
