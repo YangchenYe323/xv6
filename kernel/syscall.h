@@ -20,7 +20,6 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
-
 // System calls for labs
 #define SYS_trace     22
 #define SYS_sysinfo   23
@@ -29,5 +28,10 @@
 #define SYS_symlink   26
 #define SYS_mmap      27
 #define SYS_munmap    28
+#ifdef LAB_NET
 #define SYS_connect   29
+#endif
+#ifdef LAB_PGCTL
 #define SYS_pgaccess  30
+#endif
+#define SYS_fmem   22

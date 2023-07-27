@@ -39,6 +39,46 @@ exec(char *path, char **argv)
   }
   ilock(ip);
 
+  // Support parsing #!<path_to_executable>
+  // In which case the real execution is <path_to_executable> <file_path> ...args
+  char tmp;
+  // buf holds <path_to_executable>
+  char buf[MAXPATH];
+  // holds new argument list
+  char *args[MAXARG];
+  char *pos = buf;
+  char **arg = args;
+
+  if (readi(ip, 0, (uint64)&tmp, 0, 1) == 1 && tmp == '#' && (readi(ip, 0, (uint64)&tmp, 1, 1) == 1 && tmp == '!')) {
+    int idx = 2;
+    while ((readi(ip, 0, (uint64)pos, idx, 1) == 1 && *pos != '\n')) {
+      pos++;
+      idx++;
+      if (pos == &buf[MAXPATH]) {
+        printf("#!<path_to_executable> too long\n");
+        goto bad;
+      }
+    }
+    *pos = '\0';
+
+    *arg = buf;
+    arg++;
+    for (int argc = 0; argv[argc]; argc++) {
+      if (argc == MAXARG - 1) {
+        printf("too much argument\n");
+        goto bad;
+      }
+      *arg = argv[argc];
+      arg++;
+    }
+    *arg = 0;
+
+    end_op();
+    iunlock(ip);
+
+    return exec(buf, args);
+  }
+
   // Check ELF header
   if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
     goto bad;
