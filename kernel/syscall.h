@@ -28,10 +28,6 @@
 #define SYS_symlink   26
 #define SYS_mmap      27
 #define SYS_munmap    28
-#ifdef LAB_NET
 #define SYS_connect   29
-#endif
-#ifdef LAB_PGCTL
 #define SYS_pgaccess  30
-#endif
 #define SYS_fmem   22
