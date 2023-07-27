@@ -450,5 +450,66 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
+/**
+ * Print the content of page table at specific level
+ */
+void vmprintl(pagetable_t pagetable, int level)
+{
+  if (level > 3) {
+    return;
+  }
 
+  int num_ptes = PGSIZE / sizeof(pte_t);
+  for (int idx = 0; idx < num_ptes; idx++) {
+    pte_t pte = pagetable[idx];
+    if ((pte & PTE_V) == 0) {
+      continue;
+    }
+    for (int i = 0; i < level; i++) {
+      if (i > 0) {
+        printf(" ..");
+      } else {
+        printf("..");
+      }
+    }
+    printf("%d: pte %p pa %p\n", idx, pte, PTE2PA(pte));
+    vmprintl((pagetable_t) PTE2PA(pte), level + 1);
+  }
+}
 
+void
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  vmprintl(pagetable, 1);
+}
+
+#ifdef LAB_PGTBL
+/**
+ * Calculate how many pages starting from [va - va + len * PGSIZE]
+ * is accessed, storing the result in the user space bitmap pointed to by
+ * mask.
+ */
+int pgaccess(pagetable_t pagetable, uint64 va, int len, uint64 mask) {
+  uint64 start = PGROUNDDOWN(va);
+  int kmask = 0;
+  for (int i = 0; i < len; i++) {
+    pte_t *pte = walk(pagetable, start, 0);
+    if (pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0) {
+      // Page is not mapped or is invalid for the user process.
+      return -1;
+    }
+    if ((*pte & PTE_A) != 0) {
+      kmask |= (1 << i);
+      // clear the access bit
+      *pte = (*pte & ~PTE_A);
+    }
+
+    start += PGSIZE;
+  }
+  if (copyout(pagetable, mask, (char *)&kmask, sizeof(int)) == -1) {
+    return -1;
+  }
+  return 0;
+}
+#endif

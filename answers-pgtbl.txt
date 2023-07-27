@@ -1,0 +1,5 @@
+1. read() could possibly be faster if kernel can read directly into the shared page
+instead of doing a copy from kernel buffer to user buffer.
+
+2. Page 0 contains program text (7 means VALID, READ and EXECUTE), page 2 contains the stack guard, user can read/write memory in page 1, the third to last page contains:
+USYSCALL mapped page, trapframe and trampoline.
