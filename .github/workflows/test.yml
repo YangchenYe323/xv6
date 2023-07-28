@@ -16,5 +16,5 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: sudo apt-get install build-essential gdb-multiarch qemu-system-misc gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu
-    - name: test lab {{ matrix.lab }}
-      run: LAB={{ matrix.lab }} make grade
+    - name: test lab ${{ matrix.lab }}
+      run: LAB=${{ matrix.lab }} make grade
