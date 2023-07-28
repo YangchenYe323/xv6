@@ -1,0 +1,20 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lab: ["util", "pgtbl", "syscall", "traps", "thread", "net", "cow"]
+    steps:
+    - uses: actions/checkout@v3
+    - run: sudo apt-get install build-essential gdb-multiarch qemu-system-misc gcc-riscv64-linux-gnu binutils-riscv64-linux-gnu
+    - name: test lab ${{ matrix.lab }}
+      run: LAB=${{ matrix.lab }} make grade
