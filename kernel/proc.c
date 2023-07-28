@@ -155,12 +155,12 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  if(p->trapframe)
-    kfree((void*)p->trapframe);
-  p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  if(p->trapframe) 
+    kfree((void*)p->trapframe);
+  p->trapframe = 0;
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -234,8 +234,8 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 #ifdef LAB_PGTBL
   pte_t *pte = walk(pagetable, USYSCALL, 0);
   uint64 pa = PTE2PA(*pte);
-  kfree((void *) pa);
   uvmunmap(pagetable, USYSCALL, 1, 0);
+  kfree((void *) pa);
 #endif
   uvmfree(pagetable, sz);
 }

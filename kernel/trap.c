@@ -15,6 +15,7 @@ extern char trampoline[], uservec[], userret[];
 void kernelvec();
 
 extern int devintr();
+int handle_pagefault();
 
 void
 trapinit(void)
@@ -67,6 +68,8 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if(handle_pagefault() != 0) {
+    // ok, this is a handled page fault
   } else {
 
     
@@ -228,3 +231,52 @@ devintr()
   }
 }
 
+int
+handle_pagefault() {
+  if (r_scause() != 0x000000000000000f) {
+    return 0;
+  }
+
+  // page fault has scause 0xf
+  struct proc *p = myproc();
+  // this is the virtual address causing page fault
+  uint64 va = r_stval();
+  va = PGROUNDDOWN(va);
+
+  if (va >= MAXVA) {
+    setkilled(p);
+    return 1;
+  }
+
+  pte_t *pte = walk(p->pagetable, va, 0);
+
+  if (pte == 0) {
+    setkilled(p);
+    return 1;
+  }
+  uint flags = PTE_FLAGS(*pte);
+  uint64 pa = PTE2PA(*pte);
+
+  // if this is not a COW page, also kill the process
+  if ((flags & PTE_COW) == 0) {
+    setkilled(p);
+    return 1;
+  }
+
+  flags = (flags | PTE_W) & ~PTE_COW;
+
+  // This is a COW page, copy a new one and modify the mapping
+  char *mem = kalloc();
+  if (mem == 0) {
+    setkilled(p);
+    return 1;
+  }
+  
+  memmove(mem, (void*)pa, PGSIZE);
+  uvmunmap(p->pagetable, va, 1, 1);
+  if (mappages(p->pagetable, va, PGSIZE, (uint64) mem, flags) != 0) {
+    setkilled(p);
+    return 1;
+  }
+  return 1;
+}

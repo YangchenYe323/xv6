@@ -70,6 +70,9 @@ void            kfree(void *);
 void            kinit(void);
 int             kfreemem(void);
 uint64          free_physical_memory(void);
+void            kreference(void *);
+void            kdereference(void *);
+char            knumreference(void *);
 
 // log.c
 void            initlog(int, struct superblock*);
