@@ -1,0 +1,4 @@
+1. There are missing keys with 2 threads because the hash table bucket is implemented
+as a linked list, and inserting new entry is inserting to the front of the linked list.
+When two threads are performing insertion again. They both read in the old head, makes the new head pointing
+to it and the later thread overwrites the first thread, causing the first thread's update be lost.
