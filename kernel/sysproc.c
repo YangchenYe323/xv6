@@ -63,7 +63,9 @@ sys_sleep(void)
   int n;
   uint ticks0;
 
+#ifdef LAB_TRAP
   backtrace();
+#endif
 
   argint(0, &n);
   acquire(&tickslock);
