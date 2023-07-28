@@ -1,2 +1,2 @@
-# LAB: util, syscall, pgtbl, net, cow, thread
-LAB=thread
+# LAB: util, syscall, pgtbl, net, cow, thread, traps
+LAB=traps

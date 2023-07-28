@@ -9,7 +9,7 @@
 struct spinlock tickslock;
 uint ticks;
 
-extern char trampoline[], uservec[], userret[];
+extern char trampoline[], uservec[], userret[], useralarmret[];
 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
@@ -83,10 +83,56 @@ usertrap(void)
   
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
     yield();
+    handlealarm();
+  }
 
   usertrapret();
+}
+
+void handlealarm(void) {
+  struct proc *p = myproc();
+  // if alarm is not enabled skip
+  if (p->alarm_ticks == 0 || p->alarm_executing) {
+    return;
+  }
+  p->current_tick++;
+  if (p->current_tick == p->alarm_ticks) {
+    p->current_tick = 0;
+    // avoid re-entering alarm handler
+    p->alarm_executing = 1;
+    // save p's register
+    memmove(&p->alarmframe, p->trapframe, sizeof(struct trapframe));
+    // return to alarm handler
+    alarmret();
+  }
+}
+
+void
+alarmret(void) {
+  struct proc *p = myproc();
+  intr_off();
+  uint64 trampoline_uservec = TRAMPOLINE + (uservec - trampoline);
+  w_stvec(trampoline_uservec);
+  uint64 trampoline_userret = TRAMPOLINE + (userret- trampoline);
+
+    // set up trapframe values that uservec will need when
+  // the process next traps into the kernel.
+  p->trapframe->kernel_satp = r_satp();         // kernel page table
+  p->trapframe->kernel_sp = p->kstack + PGSIZE; // process's kernel stack
+  p->trapframe->kernel_trap = (uint64)usertrap;
+  p->trapframe->kernel_hartid = r_tp();         // hartid for cpuid()
+
+  // set S Previous Privilege mode to User.
+  unsigned long x = r_sstatus();
+  x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
+  x |= SSTATUS_SPIE; // enable interrupts in user mode
+  w_sstatus(x);
+  // set S Exception Program Counter to the saved user pc.
+  w_sepc(p->alarm_handler);
+  uint64 satp = MAKE_SATP(p->pagetable);
+  ((void (*)(uint64))trampoline_userret)(satp);
 }
 
 //

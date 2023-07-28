@@ -1,0 +1,10 @@
+1. 13 to printf is stored in a2. arguments are stored in a1 and a2
+2. They are inlined and statically evaluated to the result 12
+3. 0000000000000630, it is jumped by first loading the instruction address of
+`auipc ra,0x0` in ra, which is 0x30, and the do a `jalr 1536(ra)`, which jumps to
+the instruction located at 0x30 + 0x600 = 0x630, which is printf
+4. ra is 0x30, just stored by `auipc ra,0x0`, because ra is saved and restored by
+the prinf procedure
+5. HE110, World
+if big-endian, i should be 0x726c6400
+6. It prints whatever in the a2 register when printf is called.

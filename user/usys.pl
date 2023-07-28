@@ -41,3 +41,5 @@ entry("pgaccess");
 entry("fmem");
 entry("trace");
 entry("sysinfo");
+entry("sigalarm");
+entry("sigreturn");
