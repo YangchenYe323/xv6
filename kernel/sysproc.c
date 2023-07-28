@@ -63,7 +63,7 @@ sys_sleep(void)
   int n;
   uint ticks0;
 
-#ifdef LAB_TRAP
+#ifdef LAB_TRAPS
   backtrace();
 #endif
 
