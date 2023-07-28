@@ -3,7 +3,9 @@
 # (e.g., LAB=util).  Run make grade to test solution with the lab's
 # grade script (e.g., grade-lab-util).
 
+ifndef LAB
 -include conf/lab.mk
+endif
 
 K=kernel
 U=user
