@@ -320,8 +320,10 @@ ilock(struct inode *ip)
 void
 iunlock(struct inode *ip)
 {
-  if(ip == 0 || !holdingsleep(&ip->lock) || ip->ref < 1)
-    panic("iunlock");
+  if(ip == 0 || !holdingsleep(&ip->lock) || ip->ref < 1) {
+    printf("ip: %p\n", ip);
+    panic("iunlock\n");
+  }
 
   releasesleep(&ip->lock);
 }

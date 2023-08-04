@@ -301,6 +301,35 @@ create(char *path, short type, short major, short minor)
   return 0;
 }
 
+void followlink(struct inode **ip) {
+  struct inode *next;
+  char path[MAXPATH];
+  int depth = 0;
+  
+  while ((*ip)->type == T_SYMLINK) {
+    if (depth > 10) {
+      iunlockput(*ip);
+      *ip = 0;
+      return;
+    }
+    // Follow link
+    if ((readi(*ip, 0, (uint64)path, 0, MAXPATH)) != MAXPATH) {
+      iunlockput(*ip);
+      *ip = 0;
+      return;
+    }
+    if ((next = namei(path)) == 0) {
+      iunlockput(*ip);
+      *ip = 0;
+      return;
+    }
+    iunlockput(*ip);
+    ilock(next);
+    *ip = next;
+    depth++;
+  }
+}
+
 uint64
 sys_open(void)
 {
@@ -341,6 +370,15 @@ sys_open(void)
     return -1;
   }
 
+  if (ip->type == T_SYMLINK && (omode & ~O_NOFOLLOW)) {
+    // follow symlink
+    followlink(&ip);
+    if (ip == 0) {
+      end_op();
+      return -1;
+    }
+  }
+
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       fileclose(f);
@@ -356,6 +394,7 @@ sys_open(void)
     f->type = FD_INODE;
     f->off = 0;
   }
+
   f->ip = ip;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
@@ -502,4 +541,45 @@ sys_pipe(void)
     return -1;
   }
   return 0;
+}
+
+uint64
+sys_symlink(void) {
+  char target[MAXPATH], path[MAXPATH], name[MAXPATH];
+  struct inode *link = 0;
+  struct inode *dir = 0;
+  uint off;
+  struct dirent de;
+  int code = -1;
+
+  if (argstr(0, target, MAXPATH) < 0 || argstr(1, path, MAXPATH) < 0) {
+    return -1;
+  }
+
+  begin_op();
+  if ((link = create(path, T_SYMLINK, 0, 0)) == 0) {
+    goto bad;
+  }
+  if (writei(link, 0, (uint64)target, 0, MAXPATH) < MAXPATH) {
+    if ((dir = nameiparent(path, name)) == 0) {
+      printf("Uncleaned invalid symlink\n");
+      goto bad;
+    }
+    ilock(dir);
+    dirlookup(dir, name, &off);
+    memset(&de, 0, sizeof(de));
+    if (writei(dir, 0, (uint64)(&de), off, sizeof(de)) != sizeof(de)) {
+      printf("Uncleaned invalid symlink\n");
+    }
+    link->nlink--;
+    goto bad;
+  }
+
+  code = 0;
+
+bad:
+  if (link) iunlockput(link);
+  if (dir) iunlockput(dir);
+  end_op();
+  return code;
 }
